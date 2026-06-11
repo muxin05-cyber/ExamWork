@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔮 Гороскопы — Сервис предсказаний</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #a5b4fc;
+            --primary-dark: #4338ca;
+            --accent: #f59e0b;
+            --bg: #f5f3ff;
+            --card: #ffffff;
+            --text: #1e1b4b;
+            --text-light: #6b7280;
+            --border: #e0e7ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --compare-selected: #eef2ff;
+            --compare-border: #6366f1;
+            --radius: 16px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand { font-size: 22px; font-weight: 700; color: var(--primary); cursor: pointer; }
+        .navbar-center { font-size: 14px; color: var(--text-light); }
+        .navbar-nav { display: flex; gap: 10px; align-items: center; }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--compare-selected); }
+        .btn-danger { background: transparent; border: 2px solid transparent; color: var(--text-light); }
+        .btn-danger:hover { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
+        .btn-compare { background: transparent; border: 2px solid var(--border); color: var(--text-light); }
+        .btn-compare.selected { background: var(--compare-selected); border-color: var(--compare-border); color: var(--primary); font-weight: 700; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+        .btn-sm { padding: 7px 14px; font-size: 12px; }
+
+        .btn-disabled { background: #d1d5db !important; cursor: not-allowed !important; opacity: 0.7; }
+        .btn-disabled:hover { background: #d1d5db !important; transform: none !important; box-shadow: none !important; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+        .card-header { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--primary-dark); }
+
+        .grid { display: grid; gap: 24px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text); font-size: 13px; }
+        input, select, textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: var(--bg);
+            color: var(--text);
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08); }
+        textarea { resize: vertical; min-height: 80px; }
+
+        .slider-container { display: flex; align-items: center; gap: 14px; }
+        input[type="range"] { flex: 1; -webkit-appearance: none; height: 6px; background: var(--border); border-radius: 3px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: var(--primary); border-radius: 50%; cursor: pointer; }
+        .slider-value { font-weight: 700; color: var(--primary); min-width: 36px; text-align: center; font-size: 14px; }
+
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #eef2ff; color: var(--primary-dark); }
+        .badge-date { background: #fce7f3; color: #9d174d; }
+
+        .horoscope-block { background: var(--bg); border-left: 3px solid var(--primary-light); padding: 14px 16px; border-radius: 0 10px 10px 0; margin-bottom: 12px; }
+        .horoscope-block h3 { font-size: 14px; margin-bottom: 6px; color: var(--primary-dark); }
+        .horoscope-block p { font-size: 14px; color: var(--text); line-height: 1.7; }
+
+        .tabs { display: flex; gap: 6px; background: var(--bg); padding: 5px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border); }
+        .tab { flex: 1; text-align: center; padding: 10px 16px; border-radius: 9px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; color: var(--text-light); }
+        .tab.active { background: var(--card); color: var(--primary); box-shadow: var(--shadow-sm); }
+        .tab:hover:not(.active) { color: var(--primary); background: var(--compare-selected); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--card); border-radius: var(--radius); padding: 28px; max-width: 460px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 14px 20px; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; animation: slideIn 0.3s ease; z-index: 2000; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: var(--card); transition: all 0.2s; }
+        .history-item:hover { box-shadow: var(--shadow); border-color: var(--primary-light); }
+
+        .compare-notice { background: var(--compare-selected); border: 1px solid var(--primary-light); border-radius: 10px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px; color: var(--primary-dark); }
+        .compare-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .compare-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 20px; background: var(--card); }
+
+        .compare-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .compare-table th, .compare-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        .compare-table th { background: var(--compare-selected); font-weight: 700; color: var(--primary-dark); font-size: 13px; }
+        .compare-table td { font-size: 14px; }
+        .compare-same { color: var(--text-light); }
+        .compare-diff { color: var(--primary); font-weight: 600; }
+        .param-diff { background: #fef9c3; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+
+        /* Стили для индикатора лимитов */
+        .limit-info {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+        .limit-ok { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .limit-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .limit-exhausted { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .text-muted { color: var(--text-light); font-size: 13px; }
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 14px; }
+        .mt-3 { margin-top: 22px; }
+        .mb-2 { margin-bottom: 14px; }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .compare-container { grid-template-columns: 1fr; }
+            .navbar { padding: 12px 16px; }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="navbar-brand" onclick="showPage('generator')">🔮 Гороскопы</div>
+    <div class="navbar-center" id="currentDate"></div>
+    <div class="navbar-nav" id="navAuth">
+        <button class="btn btn-outline btn-sm" onclick="openModal('login')">Войти</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('register')">Регистрация</button>
+    </div>
+    <div class="navbar-nav" id="navUser" style="display:none;">
+        <span id="usernameDisplay" style="font-weight:600; color: var(--primary-dark);"></span>
+        <span id="limitDisplay" style="font-size:12px; color: var(--text-light); margin-left:8px;"></span>
+        <button class="btn btn-outline btn-sm" onclick="logout()">Выйти</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="tabs" id="tabs" style="display:none;">
+        <div class="tab active" onclick="showPage('generator')">✨ Генератор</div>
+        <div class="tab" onclick="showPage('history')">📋 История</div>
+        <div class="tab" onclick="showPage('compare')">🔄 Сравнение</div>
+    </div>
+
+    <!-- Генератор -->
+    <div id="pageGenerator" style="display:none;">
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">📝 Параметры</div>
+                <form id="horoscopeForm" onsubmit="generateHoroscope(event)">
+                    <div id="limitInfo" class="limit-info" style="display:none;"></div>
+                    <div class="form-group">
+                        <label>Опишите себя или ситуацию</label>
+                        <textarea id="characteristic" placeholder="Например: Программист на дедлайне, 2 курс ИБ" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Тональность</label>
+                        <select id="tone" required>
+                            <option value="sarcastic">😏 Саркастичная</option>
+                            <option value="motivational">🚀 Мотивационная</option>
+                            <option value="mystical">🔮 Мистическая</option>
+                            <option value="serious">👔 Серьёзная</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Формальность</label>
+                        <select id="formality" required>
+                            <option value="low">💬 Низкая</option>
+                            <option value="medium">📊 Средняя</option>
+                            <option value="high">🎩 Высокая</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Уровень абсурда: <span id="absurdityValue">50</span>%</label>
+                        <div class="slider-container">
+                            <span>😇</span>
+                            <input type="range" id="absurdityLevel" min="0" max="100" value="50" oninput="document.getElementById('absurdityValue').textContent = this.value">
+                            <span>🤪</span>
+                        </div>
+                    </div>
+                    <button type="submit" id="generateBtn" class="btn btn-primary" style="width:100%;">✨ Сгенерировать</button>
+                </form>
+            </div>
+            <div id="resultCard" class="card" style="display:none;">
+                <div class="card-header">📜 Результат</div>
+                <div id="horoscopeResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- История -->
+    <div id="pageHistory" style="display:none;">
+        <div id="compareNotice" class="compare-notice" style="display:none;">
+            📊 Выбрано для сравнения: <strong><span id="compareCount">0</span>/2</strong>. <span id="compareHint"></span>
+        </div>
+        <div class="card">
+            <div class="card-header">📋 История запросов</div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <!-- Сравнение -->
+    <div id="pageCompare" style="display:none;">
+        <div class="card">
+            <div class="card-header">🔄 Сравнение версий</div>
+            <p class="text-muted mb-2">Выберите два гороскопа в истории (кнопка 🔄), затем нажмите «Сравнить»</p>
+            <button class="btn btn-primary mb-3" onclick="compareSelected()">📊 Сравнить выбранные</button>
+            <div id="compareResult"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальные окна -->
+<div class="modal" id="modalLogin">
+    <div class="modal-content">
+        <h2 style="margin-bottom:18px; color: var(--primary-dark);">🔑 Вход</h2>
+        <form onsubmit="login(event)">
+            <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com" required></div>
+            <div class="form-group"><label>Пароль</label><input type="password" id="loginPassword" placeholder="••••••" required></div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Войти</button>
+        </form>
+        <button class="btn btn-outline btn-sm mt-2" style="width:100%;" onclick="closeModal('login')">Отмена</button>
+    </div>
+</div>
+
+<div class="modal" id="modalRegister">
+    <div class="modal-content">
+        <h2 style="margin-bottom:18px; color: var(--primary-dark);">✨ Регистрация</h2>
+        <form onsubmit="register(event)">
+            <div class="form-group"><label>Имя</label><input type="text" id="regUsername" placeholder="Иван" required></div>
+            <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com" required></div>
+            <div class="form-group"><label>Пароль</label><input type="password" id="regPassword" placeholder="Минимум 6 символов" required></div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Зарегистрироваться</button>
+        </form>
+        <button class="btn btn-outline btn-sm mt-2" style="width:100%;" onclick="closeModal('register')">Отмена</button>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080/api';
+    let currentRequestId = null;
+    let token = localStorage.getItem('token');
+    let username = localStorage.getItem('username');
+    let compareIds = [];
+    let remainingRequests = 20;
+    let dailyLimit = 20;
+
+    // ==================== ПРОВЕРКА ТОКЕНА ====================
+
+    function isTokenExpired() {
+        if (!token) return true;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expiryTime = payload.exp * 1000;
+            const now = Date.now();
+            const remaining = expiryTime - now;
+            if (remaining <= 0) { console.log('🔴 Токен истёк'); return true; }
+            else if (remaining < 3600000) { console.log('🟡 Токен истекает через', Math.round(remaining / 60000), 'минут'); }
+            return false;
+        } catch (e) { console.log('🔴 Невалидный токен'); return true; }
+    }
+
+    function handleExpiredToken() {
+        localStorage.clear();
+        token = null;
+        username = null;
+        compareIds = [];
+        showLoginPrompt();
+        showToast('🔐 Сессия истекла. Пожалуйста, войдите заново.', 'error');
+    }
+
+    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+
+    document.getElementById('currentDate').textContent = '📅 ' + new Date().toLocaleDateString('ru-RU', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    if (token) {
+        if (isTokenExpired()) { handleExpiredToken(); } else { showAuthenticated(); }
+    } else {
+        showLoginPrompt();
+    }
+
+    setInterval(() => {
+        if (token && isTokenExpired()) { handleExpiredToken(); }
+    }, 300000);
+
+    // ==================== UI ФУНКЦИИ ====================
+
+    function showLoginPrompt() {
+        document.getElementById('navAuth').style.display = 'flex';
+        document.getElementById('navUser').style.display = 'none';
+        document.getElementById('tabs').style.display = 'none';
+        document.querySelectorAll('[id^="page"]').forEach(p => p.style.display = 'none');
+        setTimeout(() => openModal('login'), 500);
+    }
+
+    function showAuthenticated() {
+        if (isTokenExpired()) { handleExpiredToken(); return; }
+        document.getElementById('navAuth').style.display = 'none';
+        document.getElementById('navUser').style.display = 'flex';
+        document.getElementById('usernameDisplay').textContent = '👤 ' + username;
+        document.getElementById('tabs').style.display = 'flex';
+        showPage('generator');
+        loadLimits();
+    }
+
+    function logout() {
+        localStorage.clear();
+        token = null;
+        username = null;
+        compareIds = [];
+        remainingRequests = 20;
+        showLoginPrompt();
+        showToast('Вы вышли из аккаунта', 'success');
+    }
+
+    function openModal(type) {
+        document.getElementById('modal' + type.charAt(0).toUpperCase() + type.slice(1)).classList.add('active');
+    }
+
+    function closeModal(type) {
+        document.getElementById('modal' + type.charAt(0).toUpperCase() + type.slice(1)).classList.remove('active');
+    }
+
+    function showPage(page) {
+        if (token && isTokenExpired()) { handleExpiredToken(); return; }
+        document.querySelectorAll('[id^="page"]').forEach(p => p.style.display = 'none');
+        document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).style.display = 'block';
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        const tabTexts = { 'generator': 'Генератор', 'history': 'История', 'compare': 'Сравнение' };
+        document.querySelectorAll('.tab').forEach(t => {
+            if (t.textContent.includes(tabTexts[page] || '')) t.classList.add('active');
+        });
+        if (page === 'history') loadHistory();
+        if (page === 'compare') updateCompareNotice();
+    }
+
+    function updateCompareNotice() {
+        const notice = document.getElementById('compareNotice');
+        const hint = document.getElementById('compareHint');
+        if (compareIds.length === 0) {
+            notice.style.display = 'none';
+        } else {
+            notice.style.display = 'block';
+            document.getElementById('compareCount').textContent = compareIds.length;
+            hint.textContent = compareIds.length === 1 ? 'Выберите ещё один гороскоп' : 'Нажмите «Сравнить» для просмотра';
+        }
+    }
+
+    // ==================== ЛИМИТЫ ====================
+
+    async function loadLimits() {
+        try {
+            const res = await authFetch(`${API}/horoscope/limits`);
+            const data = await res.json();
+            remainingRequests = data.remaining;
+            dailyLimit = data.dailyLimit;
+            updateLimitDisplay();
+            document.getElementById('limitDisplay').textContent = `Осталось: ${remainingRequests}/${dailyLimit}`;
+        } catch (e) {
+            document.getElementById('limitInfo').style.display = 'none';
+        }
+    }
+
+    function updateLimitDisplay() {
+        const limitInfo = document.getElementById('limitInfo');
+        const generateBtn = document.getElementById('generateBtn');
+
+        if (remainingRequests <= 0) {
+            limitInfo.style.display = 'block';
+            limitInfo.className = 'limit-info limit-exhausted';
+            limitInfo.innerHTML = '🚫 <strong>Лимит генераций на сегодня исчерпан!</strong><br>' +
+                                  '<span style="font-size:11px;">Попробуйте завтра. Ежедневный лимит: ' + dailyLimit + ' генераций.</span>';
+            generateBtn.disabled = true;
+            generateBtn.classList.add('btn-disabled');
+            generateBtn.textContent = '🔒 Генерации закончились';
+        } else if (remainingRequests <= 5) {
+            limitInfo.style.display = 'block';
+            limitInfo.className = 'limit-info limit-warning';
+            limitInfo.innerHTML = '⚠️ <strong>Осталось генераций: ' + remainingRequests + ' из ' + dailyLimit + '</strong><br>' +
+                                  '<span style="font-size:11px;">Лимит обновится завтра.</span>';
+            generateBtn.disabled = false;
+            generateBtn.classList.remove('btn-disabled');
+            generateBtn.textContent = '✨ Сгенерировать';
+        } else {
+            limitInfo.style.display = 'block';
+            limitInfo.className = 'limit-info limit-ok';
+            limitInfo.innerHTML = '✅ <strong>Осталось генераций: ' + remainingRequests + ' из ' + dailyLimit + '</strong>';
+            generateBtn.disabled = false;
+            generateBtn.classList.remove('btn-disabled');
+            generateBtn.textContent = '✨ Сгенерировать';
+        }
+    }
+
+    // ==================== БЕЗОПАСНЫЙ FETCH ====================
+
+    async function authFetch(url, options = {}) {
+        if (isTokenExpired()) { handleExpiredToken(); throw new Error('Token expired'); }
+        const defaultHeaders = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+        const response = await fetch(url, {
+            ...options,
+            headers: { ...defaultHeaders, ...options.headers }
+        });
+        if (response.status === 401) {
+            console.log('🔴 Сервер вернул 401 — токен недействителен');
+            handleExpiredToken();
+            throw new Error('Unauthorized');
+        }
+        return response;
+    }
+
+    // ==================== АВТОРИЗАЦИЯ ====================
+
+    async function register(event) {
+        event.preventDefault();
+        const res = await fetch(`${API}/auth/register`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: document.getElementById('regEmail').value,
+                username: document.getElementById('regUsername').value,
+                password: document.getElementById('regPassword').value
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            token = data.token;
+            username = data.username;
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', username);
+            closeModal('register');
+            showAuthenticated();
+            showToast('Регистрация успешна!', 'success');
+        } else {
+            showToast(data.error || data.message || 'Ошибка регистрации', 'error');
+            highlightFields('reg');
+        }
+    }
+
+    async function login(event) {
+        event.preventDefault();
+        const res = await fetch(`${API}/auth/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            token = data.token;
+            username = data.username;
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', username);
+            closeModal('login');
+            showAuthenticated();
+            showToast('Вход выполнен! Токен действителен 24 часа.', 'success');
+        } else {
+            if (res.status === 401) {
+                showToast('❌ Неверный логин или пароль', 'error');
+            } else {
+                const data = await res.json().catch(() => ({}));
+                showToast(data.error || data.message || 'Ошибка входа', 'error');
+            }
+            highlightFields('login');
+        }
+    }
+
+    function highlightFields(prefix) {
+        document.getElementById(prefix + 'Email').style.borderColor = '#ef4444';
+        document.getElementById(prefix + 'Password').style.borderColor = '#ef4444';
+        setTimeout(() => {
+            document.getElementById(prefix + 'Email').style.borderColor = '';
+            document.getElementById(prefix + 'Password').style.borderColor = '';
+        }, 2000);
+    }
+
+    // ==================== ГОРОСКОПЫ ====================
+
+    async function generateHoroscope(event) {
+        event.preventDefault();
+        if (remainingRequests <= 0) {
+            showToast('🚫 Лимит генераций на сегодня исчерпан! Попробуйте завтра.', 'error');
+            return;
+        }
+        try {
+            const res = await authFetch(`${API}/horoscope/generate`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    characteristic: document.getElementById('characteristic').value,
+                    tone: document.getElementById('tone').value,
+                    formality: document.getElementById('formality').value,
+                    absurdityLevel: parseInt(document.getElementById('absurdityLevel').value)
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                currentRequestId = data.id;
+                displayHoroscope(data);
+                remainingRequests--;
+                updateLimitDisplay();
+                loadLimits();
+                showToast('Гороскоп готов!', 'success');
+            } else {
+                if (data.error && data.error.includes('лимит')) {
+                    remainingRequests = 0;
+                    updateLimitDisplay();
+                    showToast('🚫 Лимит генераций исчерпан!', 'error');
+                } else {
+                    showToast('Ошибка генерации', 'error');
+                }
+            }
+        } catch (e) {}
+    }
+
+    async function generateWithSameParams() {
+        if (remainingRequests <= 0) {
+            showToast('🚫 Лимит генераций на сегодня исчерпан! Попробуйте завтра.', 'error');
+            return;
+        }
+        try {
+            const res = await authFetch(`${API}/horoscope/generate`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    characteristic: document.getElementById('characteristic').value,
+                    tone: document.getElementById('tone').value,
+                    formality: document.getElementById('formality').value,
+                    absurdityLevel: parseInt(document.getElementById('absurdityLevel').value)
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                currentRequestId = data.id;
+                displayHoroscope(data);
+                remainingRequests--;
+                updateLimitDisplay();
+                loadLimits();
+                showToast('Новый гороскоп готов!', 'success');
+            } else {
+                showToast('Ошибка генерации', 'error');
+            }
+        } catch (e) {}
+    }
+
+    async function regenerate() {
+        if (!currentRequestId) return;
+        if (remainingRequests <= 0) {
+            showToast('🚫 Лимит генераций на сегодня исчерпан! Попробуйте завтра.', 'error');
+            return;
+        }
+        try {
+            const res = await authFetch(`${API}/horoscope/${currentRequestId}/regenerate`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    characteristic: document.getElementById('characteristic').value,
+                    tone: document.getElementById('tone').value,
+                    formality: document.getElementById('formality').value,
+                    absurdityLevel: parseInt(document.getElementById('absurdityLevel').value)
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                currentRequestId = data.id;
+                displayHoroscope(data);
+                remainingRequests--;
+                updateLimitDisplay();
+                loadLimits();
+                showToast('Перегенерировано!', 'success');
+            }
+        } catch (e) {}
+    }
+
+    function displayHoroscope(data) {
+        document.getElementById('resultCard').style.display = 'block';
+        const forDate = data.forDate || new Date(data.createdAt).toLocaleDateString('ru-RU', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        document.getElementById('horoscopeResult').innerHTML = `
+            <div style="margin-bottom:12px; display:flex; gap:6px; flex-wrap:wrap;">
+                <span class="badge badge-date">📅 ${forDate}</span>
+                <span class="badge badge-info">${data.tone}</span>
+                <span class="badge badge-info">${data.formality}</span>
+                <span class="badge badge-warning">Абсурд: ${data.absurdityLevel}%</span>
+                <span class="badge badge-success">${data.status}</span>
+            </div>
+            ${data.generalForecast ? `<div class="horoscope-block"><h3>🌟 Общий прогноз</h3><p>${data.generalForecast}</p></div>` : ''}
+            ${data.careerBlock ? `<div class="horoscope-block"><h3>💼 Карьера</h3><p>${data.careerBlock}</p></div>` : ''}
+            ${data.dangerousDays ? `<div class="horoscope-block"><h3>⚠️ Опасные дни</h3><p>${data.dangerousDays}</p></div>` : ''}
+            ${data.whatNotToDo ? `<div class="horoscope-block"><h3>🚫 Что не делать</h3><p>${data.whatNotToDo}</p></div>` : ''}
+            <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" onclick="regenerate()">🔄 Перегенерировать</button>
+                <button class="btn btn-primary btn-sm" onclick="saveResult()">💾 Сохранить</button>
+                <button class="btn btn-outline btn-sm" onclick="generateWithSameParams()">✨ Новый с этими параметрами</button>
+            </div>
+        `;
+        document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function saveResult() {
+        if (!currentRequestId) return;
+        try {
+            const res = await authFetch(`${API}/horoscope/${currentRequestId}/save`, { method: 'POST' });
+            if (res.ok) showToast('Сохранено!', 'success');
+        } catch (e) {}
+    }
+
+    // ==================== ИСТОРИЯ ====================
+
+    async function loadHistory() {
+        try {
+            const res = await authFetch(`${API}/horoscope/history`);
+            const data = await res.json();
+            const container = document.getElementById('historyList');
+            updateCompareNotice();
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center mt-3">История пуста</p>';
+                return;
+            }
+            container.innerHTML = data.map(item => {
+                const isSelected = compareIds.includes(item.id);
+                const itemDate = item.forDate || new Date(item.createdAt).toLocaleDateString('ru-RU');
+                return `
+                <div class="history-item" ondblclick="viewHoroscope('${item.id}')" style="cursor:pointer;" title="Двойной клик — открыть гороскоп">
+                    <div style="flex:1;">
+                        <strong>${item.characteristic}</strong>
+                        <div class="text-muted">📅 ${itemDate} | ${new Date(item.createdAt).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <span class="badge badge-info">${item.tone}</span>
+                        <span class="badge badge-warning">Абсурд: ${item.absurdityLevel}%</span>
+                        <span class="badge ${item.status === 'SAVED' ? 'badge-success' : 'badge-warning'}">${item.status}</span>
+                    </div>
+                    <div style="display:flex; gap:8px;" onclick="event.stopPropagation()">
+                        <button class="btn btn-outline btn-sm" onclick="viewHoroscope('${item.id}')" title="Просмотр">📖</button>
+                        <button class="btn btn-compare btn-sm ${isSelected ? 'selected' : ''}"
+                                onclick="toggleCompare('${item.id}', this)"
+                                title="${isSelected ? 'Убрать из сравнения' : 'Добавить к сравнению'}">🔄</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteRequest('${item.id}')" title="Удалить">🗑️</button>
+                    </div>
+                </div>
+            `}).join('');
+        } catch (e) {}
+    }
+
+    async function viewHoroscope(id) {
+        try {
+            const res = await authFetch(`${API}/horoscope/${id}`);
+            const data = await res.json();
+            currentRequestId = data.id;
+            document.getElementById('characteristic').value = data.characteristic || '';
+            document.getElementById('tone').value = data.tone || 'sarcastic';
+            document.getElementById('formality').value = data.formality || 'medium';
+            const absurdity = data.absurdityLevel || 50;
+            document.getElementById('absurdityLevel').value = absurdity;
+            document.getElementById('absurdityValue').textContent = absurdity;
+            displayHoroscope(data);
+            showPage('generator');
+            showToast('Гороскоп загружен', 'success');
+        } catch (e) {}
+    }
+
+    async function deleteRequest(id) {
+        if (!confirm('Удалить этот гороскоп?')) return;
+        compareIds = compareIds.filter(i => i !== id);
+        try {
+            const res = await authFetch(`${API}/horoscope/${id}`, { method: 'DELETE' });
+            if (res.ok) { showToast('Удалено!', 'success'); loadHistory(); }
+            else { showToast('Ошибка удаления', 'error'); }
+        } catch (e) {}
+    }
+
+    // ==================== СРАВНЕНИЕ ====================
+
+    function toggleCompare(id, btn) {
+        if (compareIds.includes(id)) {
+            compareIds = compareIds.filter(i => i !== id);
+            btn.classList.remove('selected');
+            btn.title = 'Добавить к сравнению';
+        } else if (compareIds.length < 2) {
+            compareIds.push(id);
+            btn.classList.add('selected');
+            btn.title = 'Убрать из сравнения';
+        } else {
+            const oldId = compareIds.shift();
+            compareIds.push(id);
+            const oldBtn = document.querySelector(`[onclick*="toggleCompare('${oldId}'"]`);
+            if (oldBtn) { oldBtn.classList.remove('selected'); oldBtn.title = 'Добавить к сравнению'; }
+            btn.classList.add('selected');
+            btn.title = 'Убрать из сравнения';
+        }
+        updateCompareNotice();
+        if (compareIds.length === 2) showToast('Выбрано 2 гороскопа! Нажмите «Сравнить»', 'success');
+        else if (compareIds.length === 1) showToast('Выберите ещё один гороскоп', 'success');
+    }
+
+    async function compareSelected() {
+        if (compareIds.length !== 2) { showToast('Выберите ровно 2 гороскопа в истории!', 'error'); return; }
+        try {
+            const res = await authFetch(`${API}/horoscope/compare`, {
+                method: 'POST',
+                body: JSON.stringify({ id1: compareIds[0], id2: compareIds[1] })
+            });
+            const data = await res.json();
+            if (res.ok && data.length === 2) {
+                showAdvancedCompare(data);
+                showPage('compare');
+                showToast('Сравнение готово!', 'success');
+            }
+        } catch (e) {}
+    }
+
+    function showAdvancedCompare(data) {
+        const [h1, h2] = data;
+        const date1 = h1.forDate || new Date(h1.createdAt).toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
+        const date2 = h2.forDate || new Date(h2.createdAt).toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
+        const sameCharacteristic = h1.characteristic === h2.characteristic;
+
+        let html = '<div class="card mt-3"><div class="card-header">📊 Сравнительный анализ</div>';
+        html += `<p class="text-muted mb-2">`;
+        if (sameCharacteristic) html += `✅ <strong>Одинаковая характеристика:</strong> «${h1.characteristic}»`;
+        else html += `📝 <strong>Разные характеристики:</strong> «${h1.characteristic}» vs «${h2.characteristic}»`;
+        html += `</p>`;
+
+        html += `<table class="compare-table">
+            <tr><th>Параметр</th><th>📜 Версия 1 (${date1})</th><th>📜 Версия 2 (${date2})</th><th>Разница</th></tr>
+            <tr><td><strong>Тональность</strong></td><td>${h1.tone}</td><td>${h2.tone}</td><td>${h1.tone !== h2.tone ? '<span class="param-diff">Разная</span>' : '<span class="compare-same">Одинаковая</span>'}</td></tr>
+            <tr><td><strong>Формальность</strong></td><td>${h1.formality}</td><td>${h2.formality}</td><td>${h1.formality !== h2.formality ? '<span class="param-diff">Разная</span>' : '<span class="compare-same">Одинаковая</span>'}</td></tr>
+            <tr><td><strong>Уровень абсурда</strong></td><td>${h1.absurdityLevel}%</td><td>${h2.absurdityLevel}%</td><td>${Math.abs(h1.absurdityLevel - h2.absurdityLevel) > 20 ? '<span class="param-diff">Сильно отличается (' + Math.abs(h1.absurdityLevel - h2.absurdityLevel) + '%)</span>' : '<span class="compare-same">Похожи (±' + Math.abs(h1.absurdityLevel - h2.absurdityLevel) + '%)</span>'}</td></tr>
+            <tr><td><strong>Дата</strong></td><td>${date1}</td><td>${date2}</td><td>${date1 !== date2 ? '<span class="param-diff">Разные даты</span>' : '<span class="compare-same">Один день</span>'}</td></tr>
+        </table>`;
+        html += '</div>';
+        html += '<div class="compare-container mt-3">';
+        html += buildCompareCard(h1, '📜 Версия 1', date1);
+        html += buildCompareCard(h2, '📜 Версия 2', date2);
+        html += '</div>';
+        document.getElementById('compareResult').innerHTML = html;
+    }
+
+    function buildCompareCard(h, title, date) {
+        return `
+            <div class="compare-card">
+                <h3 style="color:var(--primary-dark);">${title}</h3>
+                <p class="text-muted">📅 ${date} | Абсурд: ${h.absurdityLevel}% | ${h.tone} | ${h.formality}</p>
+                ${h.generalForecast ? `<div class="horoscope-block"><h3>🌟 Общий прогноз</h3><p>${h.generalForecast}</p></div>` : ''}
+                ${h.careerBlock ? `<div class="horoscope-block"><h3>💼 Карьера</h3><p>${h.careerBlock}</p></div>` : ''}
+                ${h.dangerousDays ? `<div class="horoscope-block"><h3>⚠️ Опасные дни</h3><p>${h.dangerousDays}</p></div>` : ''}
+                ${h.whatNotToDo ? `<div class="horoscope-block"><h3>🚫 Что не делать</h3><p>${h.whatNotToDo}</p></div>` : ''}
+            </div>`;
+    }
+
+    // ==================== УВЕДОМЛЕНИЯ ====================
+
+    function showToast(message, type) {
+        document.querySelectorAll('.toast').forEach(t => t.remove());
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+</script>
+</body>
+</html>
