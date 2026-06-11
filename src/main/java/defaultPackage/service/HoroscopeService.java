@@ -4,6 +4,11 @@ import defaultPackage.dto.HoroscopeGenerateRequest;
 import defaultPackage.dto.HoroscopeResponse;
 import defaultPackage.entity.HoroscopeRequest;
 import defaultPackage.entity.User;
+import defaultPackage.integration.gigachat.GigaChatClient;
+import defaultPackage.integration.gigachat.GigaChatPromptBuilder;
+import defaultPackage.integration.gigachat.GigaChatResponse;
+import defaultPackage.integration.gigachat.decorator.PromptDecorator;
+import defaultPackage.integration.gigachat.decorator.PromptDecoratorFactory;
 import defaultPackage.repository.HoroscopeRequestRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +19,31 @@ import java.util.stream.Collectors;
 
 @Service
 public class HoroscopeService {
+
     private final HoroscopeRequestRepository requestRepository;
-    public HoroscopeService(HoroscopeRequestRepository requestRepository) {
+    private final GigaChatClient gigaChatClient;
+    private final GigaChatPromptBuilder promptBuilder;
+    private final PromptDecoratorFactory decoratorFactory;
+    private final AiLogService aiLogService;
+
+    public HoroscopeService(HoroscopeRequestRepository requestRepository,
+                            GigaChatClient gigaChatClient,
+                            GigaChatPromptBuilder promptBuilder,
+                            PromptDecoratorFactory decoratorFactory,
+                            AiLogService aiLogService) {
         this.requestRepository = requestRepository;
+        this.gigaChatClient = gigaChatClient;
+        this.promptBuilder = promptBuilder;
+        this.decoratorFactory = decoratorFactory;
+        this.aiLogService = aiLogService;
+    }
+
+    public boolean canMakeRequest(UUID userId) {
+        return aiLogService.canMakeRequest(userId);
+    }
+
+    public long getRemainingRequests(UUID userId) {
+        return aiLogService.getRemainingRequests(userId);
     }
 
     public HoroscopeResponse createRequest(User user, HoroscopeGenerateRequest request) {
@@ -38,16 +65,52 @@ public class HoroscopeService {
         if (!request.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён");
         }
-        request.setGeneralForecast("✨ Общий прогноз для «" + request.getCharacteristic() +
-                "»: Сегодня отличный день для новых начинаний! Звёзды благоволят вам.");
-        request.setCareerBlock("💼 Карьерный прогноз: Вас ждёт повышение, если будете усердно работать. " +
-                "Начальство заметит ваши старания.");
-        request.setDangerousDays("⚠️ Опасные дни: Остерегайтесь понедельников и дедлайнов. " +
-                "Не подписывайте важные документы в пятницу вечером.");
-        request.setWhatNotToDo("🚫 Что не делать: Не откладывайте дела на завтра. " +
-                "Не спорьте с тимлидом при полной луне.");
-        request.setStatus("COMPLETED");
-        request.setCompletedAt(LocalDateTime.now());
+
+        if (!aiLogService.canMakeRequest(user.getId())) {
+            request.setStatus("FAILED");
+            request.setGeneralForecast("Достигнут лимит запросов на сегодня (20). Попробуйте завтра.");
+            requestRepository.save(request);
+            throw new RuntimeException("Достигнут лимит запросов на сегодня (20). Попробуйте завтра.");
+        }
+
+        try {
+            String systemPrompt = promptBuilder.buildSystemPrompt(
+                    request.getTone(), request.getFormality());
+
+            String baseUserPrompt = "Сгенерируй гороскоп для: «" +
+                    request.getCharacteristic() + "». " +
+                    "Верни ТОЛЬКО JSON, без дополнительного текста.";
+
+            PromptDecorator decorator = decoratorFactory.createDecorator(
+                    request.getAbsurdityLevel(),
+                    request.getTone(),
+                    request.getFormality()
+            );
+            String decoratedUserPrompt = decorator.decorate(baseUserPrompt);
+
+            String aiResponse = gigaChatClient.generateText(systemPrompt, decoratedUserPrompt);
+            GigaChatResponse parsed = promptBuilder.parseResponse(aiResponse);
+
+            request.setGeneralForecast(parsed.getGeneralForecast());
+            request.setCareerBlock(parsed.getCareerBlock());
+            request.setDangerousDays(parsed.getDangerousDays());
+            request.setWhatNotToDo(parsed.getWhatNotToDo());
+            request.setStatus("COMPLETED");
+            request.setCompletedAt(LocalDateTime.now());
+
+            aiLogService.logSuccess(
+                    user,
+                    "GENERATE",
+                    decoratedUserPrompt,
+                    aiResponse != null ? aiResponse.substring(0, Math.min(200, aiResponse.length())) : "",
+                    null
+            );
+
+        } catch (Exception e) {
+            aiLogService.logFailure(user, "GENERATE", request.getCharacteristic(), e.getMessage());
+            request.setStatus("FAILED");
+            request.setGeneralForecast("Ошибка генерации: " + e.getMessage());
+        }
 
         HoroscopeRequest saved = requestRepository.save(request);
         return toResponse(saved);
@@ -55,82 +118,61 @@ public class HoroscopeService {
 
     public List<HoroscopeResponse> getUserHistory(User user) {
         return requestRepository.findByUserOrderByCreatedAtDesc(user)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     public HoroscopeResponse getRequest(UUID requestId, User user) {
         HoroscopeRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Запрос не найден"));
-
         if (!request.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён");
         }
-
         return toResponse(request);
     }
 
     public HoroscopeResponse saveResult(UUID requestId, User user) {
         HoroscopeRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Запрос не найден"));
-
         if (!request.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён");
         }
-
         request.setStatus("SAVED");
-        HoroscopeRequest saved = requestRepository.save(request);
-        return toResponse(saved);
+        return toResponse(requestRepository.save(request));
     }
 
     public void deleteRequest(UUID requestId, User user) {
         HoroscopeRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Запрос не найден"));
-
         if (!request.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён");
         }
-
         requestRepository.delete(request);
     }
 
     public List<HoroscopeResponse> compareRequests(UUID id1, UUID id2, User user) {
-        HoroscopeRequest request1 = requestRepository.findById(id1)
+        HoroscopeRequest r1 = requestRepository.findById(id1)
                 .orElseThrow(() -> new RuntimeException("Первый запрос не найден"));
-        HoroscopeRequest request2 = requestRepository.findById(id2)
+        HoroscopeRequest r2 = requestRepository.findById(id2)
                 .orElseThrow(() -> new RuntimeException("Второй запрос не найден"));
-
-        if (!request1.getUser().getId().equals(user.getId()) ||
-                !request2.getUser().getId().equals(user.getId())) {
+        if (!r1.getUser().getId().equals(user.getId()) || !r2.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён");
         }
-
-        return List.of(toResponse(request1), toResponse(request2));
+        return List.of(toResponse(r1), toResponse(r2));
     }
 
     public List<HoroscopeResponse> getSimilarRequests(User user, String characteristic) {
         return requestRepository
                 .findByUserAndCharacteristicOrderByCreatedAtDesc(user, characteristic)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     private HoroscopeResponse toResponse(HoroscopeRequest entity) {
         return new HoroscopeResponse(
-                entity.getId(),
-                entity.getCharacteristic(),
-                entity.getTone(),
-                entity.getFormality(),
-                entity.getAbsurdityLevel(),
-                entity.getStatus(),
-                entity.getGeneralForecast(),
-                entity.getCareerBlock(),
-                entity.getDangerousDays(),
-                entity.getWhatNotToDo(),
-                entity.getCreatedAt(),
-                entity.getCompletedAt()
+                entity.getId(), entity.getCharacteristic(), entity.getTone(),
+                entity.getFormality(), entity.getAbsurdityLevel(), entity.getStatus(),
+                entity.getGeneralForecast(), entity.getCareerBlock(),
+                entity.getDangerousDays(), entity.getWhatNotToDo(),
+                entity.getCreatedAt(), entity.getCompletedAt()
         );
     }
 }
