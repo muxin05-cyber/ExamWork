@@ -53,18 +53,10 @@ public class GigaChatPromptBuilder {
 
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root;
-
             try {
                 root = mapper.readTree(cleanJson);
             } catch (Exception e) {
-                if (cleanJson.startsWith("\"") && cleanJson.endsWith("\"")) {
-                    String unescaped = cleanJson.substring(1, cleanJson.length() - 1)
-                            .replace("\\\"", "\"")
-                            .replace("\\n", "\n");
-                    root = mapper.readTree(unescaped);
-                } else {
-                    throw e;
-                }
+                throw new RuntimeException("Invalid JSON: " + cleanJson);
             }
             if (root.has("choices") && root.get("choices").isArray() && root.get("choices").size() > 0) {
                 JsonNode firstChoice = root.get("choices").get(0);
@@ -86,9 +78,12 @@ public class GigaChatPromptBuilder {
             response.setWhatNotToDo(root.has("whatNotToDo") ? root.get("whatNotToDo").asText() : "");
             return response;
         } catch (Exception e) {
-            System.err.println("❌ Ошибка парсинга ответа GigaChat: " + e.getMessage());
+            System.err.println("⚠️ Не удалось распарсить JSON: " + e.getMessage());
             GigaChatResponse fallback = new GigaChatResponse();
             fallback.setGeneralForecast(jsonResponse);
+            fallback.setCareerBlock("");
+            fallback.setDangerousDays("");
+            fallback.setWhatNotToDo("");
             return fallback;
         }
     }
