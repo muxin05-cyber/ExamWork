@@ -142,7 +142,6 @@
         .compare-diff { color: var(--primary); font-weight: 600; }
         .param-diff { background: #fef9c3; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
 
-        /* Стили для индикатора лимитов */
         .limit-info {
             padding: 10px 14px;
             border-radius: 10px;
@@ -305,13 +304,8 @@
         if (!token) return true;
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            const expiryTime = payload.exp * 1000;
-            const now = Date.now();
-            const remaining = expiryTime - now;
-            if (remaining <= 0) { console.log('🔴 Токен истёк'); return true; }
-            else if (remaining < 3600000) { console.log('🟡 Токен истекает через', Math.round(remaining / 60000), 'минут'); }
-            return false;
-        } catch (e) { console.log('🔴 Невалидный токен'); return true; }
+            return (payload.exp * 1000) < Date.now();
+        } catch (e) { return true; }
     }
 
     function handleExpiredToken() {
@@ -460,7 +454,6 @@
             headers: { ...defaultHeaders, ...options.headers }
         });
         if (response.status === 401) {
-            console.log('🔴 Сервер вернул 401 — токен недействителен');
             handleExpiredToken();
             throw new Error('Unauthorized');
         }
@@ -490,7 +483,7 @@
             showAuthenticated();
             showToast('Регистрация успешна!', 'success');
         } else {
-            showToast(data.error || data.message || 'Ошибка регистрации', 'error');
+            showToast(data.error || 'Ошибка регистрации', 'error');
             highlightFields('reg');
         }
     }
@@ -513,14 +506,10 @@
             localStorage.setItem('username', username);
             closeModal('login');
             showAuthenticated();
-            showToast('Вход выполнен! Токен действителен 24 часа.', 'success');
+            showToast('Вход выполнен!', 'success');
         } else {
-            if (res.status === 401) {
-                showToast('❌ Неверный логин или пароль', 'error');
-            } else {
-                const data = await res.json().catch(() => ({}));
-                showToast(data.error || data.message || 'Ошибка входа', 'error');
-            }
+            if (res.status === 401) showToast('❌ Неверный логин или пароль', 'error');
+            else showToast('Ошибка входа', 'error');
             highlightFields('login');
         }
     }
@@ -539,7 +528,7 @@
     async function generateHoroscope(event) {
         event.preventDefault();
         if (remainingRequests <= 0) {
-            showToast('🚫 Лимит генераций на сегодня исчерпан! Попробуйте завтра.', 'error');
+            showToast('🚫 Лимит генераций исчерпан!', 'error');
             return;
         }
         try {
@@ -564,17 +553,15 @@
                 if (data.error && data.error.includes('лимит')) {
                     remainingRequests = 0;
                     updateLimitDisplay();
-                    showToast('🚫 Лимит генераций исчерпан!', 'error');
-                } else {
-                    showToast('Ошибка генерации', 'error');
                 }
+                showToast('Ошибка генерации', 'error');
             }
         } catch (e) {}
     }
 
     async function generateWithSameParams() {
         if (remainingRequests <= 0) {
-            showToast('🚫 Лимит генераций на сегодня исчерпан! Попробуйте завтра.', 'error');
+            showToast('🚫 Лимит генераций исчерпан!', 'error');
             return;
         }
         try {
@@ -604,7 +591,7 @@
     async function regenerate() {
         if (!currentRequestId) return;
         if (remainingRequests <= 0) {
-            showToast('🚫 Лимит генераций на сегодня исчерпан! Попробуйте завтра.', 'error');
+            showToast('🚫 Лимит генераций исчерпан!', 'error');
             return;
         }
         try {
@@ -691,7 +678,7 @@
                         <button class="btn btn-outline btn-sm" onclick="viewHoroscope('${item.id}')" title="Просмотр">📖</button>
                         <button class="btn btn-compare btn-sm ${isSelected ? 'selected' : ''}"
                                 onclick="toggleCompare('${item.id}', this)"
-                                title="${isSelected ? 'Убрать из сравнения' : 'Добавить к сравнению'}">🔄</button>
+                                title="${isSelected ? 'Убрать' : 'Добавить к сравнению'}">🔄</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteRequest('${item.id}')" title="Удалить">🗑️</button>
                     </div>
                 </div>
@@ -722,7 +709,7 @@
         try {
             const res = await authFetch(`${API}/horoscope/${id}`, { method: 'DELETE' });
             if (res.ok) { showToast('Удалено!', 'success'); loadHistory(); }
-            else { showToast('Ошибка удаления', 'error'); }
+            else showToast('Ошибка удаления', 'error');
         } catch (e) {}
     }
 
@@ -732,26 +719,22 @@
         if (compareIds.includes(id)) {
             compareIds = compareIds.filter(i => i !== id);
             btn.classList.remove('selected');
-            btn.title = 'Добавить к сравнению';
         } else if (compareIds.length < 2) {
             compareIds.push(id);
             btn.classList.add('selected');
-            btn.title = 'Убрать из сравнения';
         } else {
             const oldId = compareIds.shift();
             compareIds.push(id);
             const oldBtn = document.querySelector(`[onclick*="toggleCompare('${oldId}'"]`);
-            if (oldBtn) { oldBtn.classList.remove('selected'); oldBtn.title = 'Добавить к сравнению'; }
+            if (oldBtn) oldBtn.classList.remove('selected');
             btn.classList.add('selected');
-            btn.title = 'Убрать из сравнения';
         }
         updateCompareNotice();
-        if (compareIds.length === 2) showToast('Выбрано 2 гороскопа! Нажмите «Сравнить»', 'success');
-        else if (compareIds.length === 1) showToast('Выберите ещё один гороскоп', 'success');
+        if (compareIds.length === 2) showToast('Выбрано 2 гороскопа!', 'success');
     }
 
     async function compareSelected() {
-        if (compareIds.length !== 2) { showToast('Выберите ровно 2 гороскопа в истории!', 'error'); return; }
+        if (compareIds.length !== 2) { showToast('Выберите ровно 2 гороскопа!', 'error'); return; }
         try {
             const res = await authFetch(`${API}/horoscope/compare`, {
                 method: 'POST',
@@ -770,22 +753,17 @@
         const [h1, h2] = data;
         const date1 = h1.forDate || new Date(h1.createdAt).toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
         const date2 = h2.forDate || new Date(h2.createdAt).toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
-        const sameCharacteristic = h1.characteristic === h2.characteristic;
 
         let html = '<div class="card mt-3"><div class="card-header">📊 Сравнительный анализ</div>';
-        html += `<p class="text-muted mb-2">`;
-        if (sameCharacteristic) html += `✅ <strong>Одинаковая характеристика:</strong> «${h1.characteristic}»`;
-        else html += `📝 <strong>Разные характеристики:</strong> «${h1.characteristic}» vs «${h2.characteristic}»`;
-        html += `</p>`;
+        html += `<p class="text-muted mb-2">${h1.characteristic === h2.characteristic ? '✅ Одинаковая характеристика' : '📝 Разные характеристики'}</p>`;
 
         html += `<table class="compare-table">
             <tr><th>Параметр</th><th>📜 Версия 1 (${date1})</th><th>📜 Версия 2 (${date2})</th><th>Разница</th></tr>
-            <tr><td><strong>Тональность</strong></td><td>${h1.tone}</td><td>${h2.tone}</td><td>${h1.tone !== h2.tone ? '<span class="param-diff">Разная</span>' : '<span class="compare-same">Одинаковая</span>'}</td></tr>
+            <tr><td><strong>Тон</strong></td><td>${h1.tone}</td><td>${h2.tone}</td><td>${h1.tone !== h2.tone ? '<span class="param-diff">Разный</span>' : '<span class="compare-same">Одинаковый</span>'}</td></tr>
             <tr><td><strong>Формальность</strong></td><td>${h1.formality}</td><td>${h2.formality}</td><td>${h1.formality !== h2.formality ? '<span class="param-diff">Разная</span>' : '<span class="compare-same">Одинаковая</span>'}</td></tr>
-            <tr><td><strong>Уровень абсурда</strong></td><td>${h1.absurdityLevel}%</td><td>${h2.absurdityLevel}%</td><td>${Math.abs(h1.absurdityLevel - h2.absurdityLevel) > 20 ? '<span class="param-diff">Сильно отличается (' + Math.abs(h1.absurdityLevel - h2.absurdityLevel) + '%)</span>' : '<span class="compare-same">Похожи (±' + Math.abs(h1.absurdityLevel - h2.absurdityLevel) + '%)</span>'}</td></tr>
-            <tr><td><strong>Дата</strong></td><td>${date1}</td><td>${date2}</td><td>${date1 !== date2 ? '<span class="param-diff">Разные даты</span>' : '<span class="compare-same">Один день</span>'}</td></tr>
-        </table>`;
-        html += '</div>';
+            <tr><td><strong>Абсурд</strong></td><td>${h1.absurdityLevel}%</td><td>${h2.absurdityLevel}%</td><td>${Math.abs(h1.absurdityLevel - h2.absurdityLevel) > 20 ? '<span class="param-diff">Сильно отличается</span>' : '<span class="compare-same">Похожи</span>'}</td></tr>
+        </table></div>`;
+
         html += '<div class="compare-container mt-3">';
         html += buildCompareCard(h1, '📜 Версия 1', date1);
         html += buildCompareCard(h2, '📜 Версия 2', date2);
@@ -794,15 +772,14 @@
     }
 
     function buildCompareCard(h, title, date) {
-        return `
-            <div class="compare-card">
-                <h3 style="color:var(--primary-dark);">${title}</h3>
-                <p class="text-muted">📅 ${date} | Абсурд: ${h.absurdityLevel}% | ${h.tone} | ${h.formality}</p>
-                ${h.generalForecast ? `<div class="horoscope-block"><h3>🌟 Общий прогноз</h3><p>${h.generalForecast}</p></div>` : ''}
-                ${h.careerBlock ? `<div class="horoscope-block"><h3>💼 Карьера</h3><p>${h.careerBlock}</p></div>` : ''}
-                ${h.dangerousDays ? `<div class="horoscope-block"><h3>⚠️ Опасные дни</h3><p>${h.dangerousDays}</p></div>` : ''}
-                ${h.whatNotToDo ? `<div class="horoscope-block"><h3>🚫 Что не делать</h3><p>${h.whatNotToDo}</p></div>` : ''}
-            </div>`;
+        return `<div class="compare-card">
+            <h3 style="color:var(--primary-dark);">${title}</h3>
+            <p class="text-muted">📅 ${date} | Абсурд: ${h.absurdityLevel}% | ${h.tone} | ${h.formality}</p>
+            ${h.generalForecast ? `<div class="horoscope-block"><h3>🌟 Общий прогноз</h3><p>${h.generalForecast}</p></div>` : ''}
+            ${h.careerBlock ? `<div class="horoscope-block"><h3>💼 Карьера</h3><p>${h.careerBlock}</p></div>` : ''}
+            ${h.dangerousDays ? `<div class="horoscope-block"><h3>⚠️ Опасные дни</h3><p>${h.dangerousDays}</p></div>` : ''}
+            ${h.whatNotToDo ? `<div class="horoscope-block"><h3>🚫 Что не делать</h3><p>${h.whatNotToDo}</p></div>` : ''}
+        </div>`;
     }
 
     // ==================== УВЕДОМЛЕНИЯ ====================

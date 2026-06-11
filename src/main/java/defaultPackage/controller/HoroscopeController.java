@@ -3,6 +3,7 @@ package defaultPackage.controller;
 import defaultPackage.dto.CompareRequest;
 import defaultPackage.dto.HoroscopeGenerateRequest;
 import defaultPackage.dto.HoroscopeResponse;
+import defaultPackage.dto.LimitResponse;
 import defaultPackage.entity.User;
 import defaultPackage.repository.UserRepository;
 import defaultPackage.security.JwtService;
@@ -108,5 +109,12 @@ public class HoroscopeController {
         User user = getCurrentUser(authHeader);
         List<HoroscopeResponse> similar = horoscopeService.getSimilarRequests(user, characteristic);
         return ResponseEntity.ok(similar);
+    }
+
+    @GetMapping("/limits")
+    public ResponseEntity<?> getLimits(@RequestHeader("Authorization") String authHeader) {
+        User user = getCurrentUser(authHeader);
+        long remaining = horoscopeService.getRemainingRequests(user.getId());
+        return ResponseEntity.ok(new LimitResponse(20, remaining));
     }
 }
