@@ -12,3 +12,4 @@ public interface HoroscopeRequestRepository extends JpaRepository<HoroscopeReque
     List<HoroscopeRequest> findByUserAndStatusOrderByCreatedAtDesc(User user, String status);
     List<HoroscopeRequest> findByUserAndCharacteristicOrderByCreatedAtDesc(User user, String characteristic);
 }
+

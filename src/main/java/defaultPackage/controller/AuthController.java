@@ -40,11 +40,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         User user = userService.authenticate(request.getEmail(), request.getPassword());
-
         if (user == null) {
             return ResponseEntity.status(401).body("{\"error\": \"Неверные учетные данные\"}");
         }
-
         String token = jwtService.generateToken(user);
         return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getUsername()));
     }

@@ -12,3 +12,4 @@ public class CompareRequest {
     public UUID getId2() { return id2; }
     public void setId2(UUID id2) { this.id2 = id2; }
 }
+
