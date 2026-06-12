@@ -195,7 +195,6 @@
         <div class="tab" onclick="showPage('compare')">🔄 Сравнение</div>
     </div>
 
-    <!-- Генератор -->
     <div id="pageGenerator" style="display:none;">
         <div class="grid grid-2">
             <div class="card">
@@ -241,7 +240,6 @@
         </div>
     </div>
 
-    <!-- История -->
     <div id="pageHistory" style="display:none;">
         <div id="compareNotice" class="compare-notice" style="display:none;">
             📊 Выбрано для сравнения: <strong><span id="compareCount">0</span>/2</strong>. <span id="compareHint"></span>
@@ -252,7 +250,6 @@
         </div>
     </div>
 
-    <!-- Сравнение -->
     <div id="pageCompare" style="display:none;">
         <div class="card">
             <div class="card-header">🔄 Сравнение версий</div>
@@ -263,7 +260,6 @@
     </div>
 </div>
 
-<!-- Модальные окна -->
 <div class="modal" id="modalLogin">
     <div class="modal-content">
         <h2 style="margin-bottom:18px; color: var(--primary-dark);">🔑 Вход</h2>
@@ -298,8 +294,6 @@
     let remainingRequests = 20;
     let dailyLimit = 20;
 
-    // ==================== ПРОВЕРКА ТОКЕНА ====================
-
     function isTokenExpired() {
         if (!token) return true;
         try {
@@ -317,8 +311,6 @@
         showToast('🔐 Сессия истекла. Пожалуйста, войдите заново.', 'error');
     }
 
-    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-
     document.getElementById('currentDate').textContent = '📅 ' + new Date().toLocaleDateString('ru-RU', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -332,8 +324,6 @@
     setInterval(() => {
         if (token && isTokenExpired()) { handleExpiredToken(); }
     }, 300000);
-
-    // ==================== UI ФУНКЦИИ ====================
 
     function showLoginPrompt() {
         document.getElementById('navAuth').style.display = 'flex';
@@ -350,7 +340,7 @@
         document.getElementById('usernameDisplay').textContent = '👤 ' + username;
         document.getElementById('tabs').style.display = 'flex';
         showPage('generator');
-        loadLimits();
+        setTimeout(() => loadLimitsSafe(), 500);
     }
 
     function logout() {
@@ -396,38 +386,35 @@
         }
     }
 
-    // ==================== ЛИМИТЫ ====================
-
-    async function loadLimits() {
+    async function loadLimitsSafe() {
         try {
-            const res = await authFetch(`${API}/horoscope/limits`);
-            const data = await res.json();
-            remainingRequests = data.remaining;
-            dailyLimit = data.dailyLimit;
-            updateLimitDisplay();
-            document.getElementById('limitDisplay').textContent = `Осталось: ${remainingRequests}/${dailyLimit}`;
-        } catch (e) {
-            document.getElementById('limitInfo').style.display = 'none';
-        }
+            const res = await fetch(`${API}/horoscope/limits`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                remainingRequests = data.remaining;
+                dailyLimit = data.dailyLimit;
+                updateLimitDisplay();
+                document.getElementById('limitDisplay').textContent = `Осталось: ${remainingRequests}/${dailyLimit}`;
+            }
+        } catch (e) {}
     }
 
     function updateLimitDisplay() {
         const limitInfo = document.getElementById('limitInfo');
         const generateBtn = document.getElementById('generateBtn');
-
         if (remainingRequests <= 0) {
             limitInfo.style.display = 'block';
             limitInfo.className = 'limit-info limit-exhausted';
-            limitInfo.innerHTML = '🚫 <strong>Лимит генераций на сегодня исчерпан!</strong><br>' +
-                                  '<span style="font-size:11px;">Попробуйте завтра. Ежедневный лимит: ' + dailyLimit + ' генераций.</span>';
+            limitInfo.innerHTML = '🚫 <strong>Лимит генераций на сегодня исчерпан!</strong><br><span style="font-size:11px;">Попробуйте завтра. Ежедневный лимит: ' + dailyLimit + ' генераций.</span>';
             generateBtn.disabled = true;
             generateBtn.classList.add('btn-disabled');
             generateBtn.textContent = '🔒 Генерации закончились';
         } else if (remainingRequests <= 5) {
             limitInfo.style.display = 'block';
             limitInfo.className = 'limit-info limit-warning';
-            limitInfo.innerHTML = '⚠️ <strong>Осталось генераций: ' + remainingRequests + ' из ' + dailyLimit + '</strong><br>' +
-                                  '<span style="font-size:11px;">Лимит обновится завтра.</span>';
+            limitInfo.innerHTML = '⚠️ <strong>Осталось генераций: ' + remainingRequests + ' из ' + dailyLimit + '</strong><br><span style="font-size:11px;">Лимит обновится завтра.</span>';
             generateBtn.disabled = false;
             generateBtn.classList.remove('btn-disabled');
             generateBtn.textContent = '✨ Сгенерировать';
@@ -441,26 +428,18 @@
         }
     }
 
-    // ==================== БЕЗОПАСНЫЙ FETCH ====================
-
     async function authFetch(url, options = {}) {
         if (isTokenExpired()) { handleExpiredToken(); throw new Error('Token expired'); }
-        const defaultHeaders = {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        };
         const response = await fetch(url, {
             ...options,
-            headers: { ...defaultHeaders, ...options.headers }
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
         });
-        if (response.status === 401) {
-            handleExpiredToken();
-            throw new Error('Unauthorized');
-        }
         return response;
     }
-
-    // ==================== АВТОРИЗАЦИЯ ====================
 
     async function register(event) {
         event.preventDefault();
@@ -523,8 +502,6 @@
         }, 2000);
     }
 
-    // ==================== ГОРОСКОПЫ ====================
-
     async function generateHoroscope(event) {
         event.preventDefault();
         if (remainingRequests <= 0) {
@@ -547,7 +524,7 @@
                 displayHoroscope(data);
                 remainingRequests--;
                 updateLimitDisplay();
-                loadLimits();
+                loadLimitsSafe();
                 showToast('Гороскоп готов!', 'success');
             } else {
                 if (data.error && data.error.includes('лимит')) {
@@ -580,7 +557,7 @@
                 displayHoroscope(data);
                 remainingRequests--;
                 updateLimitDisplay();
-                loadLimits();
+                loadLimitsSafe();
                 showToast('Новый гороскоп готов!', 'success');
             } else {
                 showToast('Ошибка генерации', 'error');
@@ -610,7 +587,7 @@
                 displayHoroscope(data);
                 remainingRequests--;
                 updateLimitDisplay();
-                loadLimits();
+                loadLimitsSafe();
                 showToast('Перегенерировано!', 'success');
             }
         } catch (e) {}
@@ -649,8 +626,6 @@
             if (res.ok) showToast('Сохранено!', 'success');
         } catch (e) {}
     }
-
-    // ==================== ИСТОРИЯ ====================
 
     async function loadHistory() {
         try {
@@ -712,8 +687,6 @@
             else showToast('Ошибка удаления', 'error');
         } catch (e) {}
     }
-
-    // ==================== СРАВНЕНИЕ ====================
 
     function toggleCompare(id, btn) {
         if (compareIds.includes(id)) {
@@ -781,8 +754,6 @@
             ${h.whatNotToDo ? `<div class="horoscope-block"><h3>🚫 Что не делать</h3><p>${h.whatNotToDo}</p></div>` : ''}
         </div>`;
     }
-
-    // ==================== УВЕДОМЛЕНИЯ ====================
 
     function showToast(message, type) {
         document.querySelectorAll('.toast').forEach(t => t.remove());
