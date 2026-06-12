@@ -15,3 +15,4 @@ CREATE TABLE IF NOT EXISTS ai_request_logs (
 
 CREATE INDEX idx_ai_request_logs_user_id ON ai_request_logs(user_id);
 CREATE INDEX idx_ai_request_logs_created_at ON ai_request_logs(created_at DESC);
+

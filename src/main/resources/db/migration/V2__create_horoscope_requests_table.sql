@@ -23,3 +23,4 @@ CREATE TABLE IF NOT EXISTS horoscope_requests (
 CREATE INDEX idx_horoscope_requests_user_id ON horoscope_requests(user_id);
 CREATE INDEX idx_horoscope_requests_status ON horoscope_requests(status);
 CREATE INDEX idx_horoscope_requests_created_at ON horoscope_requests(created_at DESC);
+

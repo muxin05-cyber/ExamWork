@@ -47,7 +47,6 @@ class AuthControllerTest {
 
     @Test
     void login_ValidCredentials_ShouldReturnToken() throws Exception {
-        // Сначала регистрируем
         RegisterRequest regReq = new RegisterRequest();
         regReq.setEmail(uniqueEmail);
         regReq.setUsername("LoginUser");

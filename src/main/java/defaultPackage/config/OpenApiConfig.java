@@ -11,7 +11,7 @@ public class OpenApiConfig {
     public OpenAPI horoscopeApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Гороскопы на все случаи жизни!")
+                        .title("Сервис гороскопов")
                         .version("1.0.0")
                         .description("API для генерации и хранения гороскопов"));
     }

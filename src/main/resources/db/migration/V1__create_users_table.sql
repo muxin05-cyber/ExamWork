@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT pk_users PRIMARY KEY (id),
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT chk_users_email CHECK (email LIKE '%_@_%._%'),
-    CONSTRAINT chk_users_username CHECK (LENGTH(username) >= 3)
-);
+    CONSTRAINT chk_users_username CHECK (LENGTH(username) >= 3));
 
 CREATE INDEX idx_users_email ON users(email);
