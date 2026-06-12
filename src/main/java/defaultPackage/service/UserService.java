@@ -26,11 +26,9 @@ public class UserService {
 
     public User authenticate(String email, String rawPassword) {
         User user = userRepository.findByEmail(email).orElse(null);
-
         if (user != null && passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             return user;
         }
-
         return null;
     }
 

@@ -15,7 +15,6 @@ class GigaChatPromptBuilderTest {
                 "}";
 
         GigaChatResponse result = builder.parseResponse(json);
-
         assertEquals("День хорош", result.getGeneralForecast());
         assertEquals("Работайте усердно", result.getCareerBlock());
         assertEquals("Остерегайтесь среды", result.getDangerousDays());

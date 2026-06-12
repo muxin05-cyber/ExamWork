@@ -66,7 +66,6 @@ public class GigaChatClient {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Accept", "application/json");
-
             HttpEntity<String> request = new HttpEntity<>(body.toString(), headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
                     properties.getApiUrl() + "/chat/completions",
@@ -79,14 +78,11 @@ public class GigaChatClient {
                 JsonNode message = choices.get(0).get("message");
                 if (message != null) {
                     String content = message.get("content").asText();
-                    System.out.println("✅ GigaChat ответ получен: " +
-                            content.substring(0, Math.min(50, content.length())) + "...");
                     return content;
                 }
             }
             throw new RuntimeException("Пустой ответ от GigaChat");
         } catch (Exception e) {
-            System.err.println("❌ Ошибка при обращении к GigaChat: " + e.getMessage());
             if (e.getMessage().contains("401") || e.getMessage().contains("Unauthorized")) {
                 tokenService.resetToken();
             }

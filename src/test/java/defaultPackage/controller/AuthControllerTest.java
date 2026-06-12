@@ -31,6 +31,7 @@ class AuthControllerTest {
         uniqueEmail = "test_" + UUID.randomUUID().toString().substring(0, 8) + "@test.com";
     }
 
+    //может ли пользователь зарегистрироваться с валидными данными
     @Test
     void register_Valid_ShouldReturnToken() throws Exception {
         RegisterRequest req = new RegisterRequest();
@@ -45,6 +46,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.username").value("TestUser"));
     }
 
+    //может ли зарегистрированный пользователь войти с правильным паролем
     @Test
     void login_ValidCredentials_ShouldReturnToken() throws Exception {
         RegisterRequest regReq = new RegisterRequest();
@@ -66,6 +68,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.username").value("LoginUser"));
     }
 
+    //пускаем ли с неправильным паролем
     @Test
     void login_InvalidPassword_ShouldReturn401() throws Exception {
         LoginRequest req = new LoginRequest();
@@ -77,12 +80,14 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // дадим ли гороскопы без токена
     @Test
     void getHistory_WithoutToken_ShouldReturn403() throws Exception {
         mockMvc.perform(get("/api/horoscope/history"))
                 .andExpect(status().isForbidden());
     }
 
+    // получим ли историю свалидным токеном
     @Test
     void getHistory_WithValidToken_ShouldReturn200() throws Exception {
         RegisterRequest regReq = new RegisterRequest();

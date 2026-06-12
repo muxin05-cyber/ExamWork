@@ -61,7 +61,6 @@ public class HoroscopeService {
     public HoroscopeResponse generateHoroscope(UUID requestId, User user) {
         HoroscopeRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Запрос не найден"));
-
         if (!request.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Доступ запрещён");
         }

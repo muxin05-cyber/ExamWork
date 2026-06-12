@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-
     private final UserService userService;
     private final JwtService jwtService;
 
@@ -26,13 +25,10 @@ public class AuthController {
         if (userService.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body("{\"error\": \"Email уже занят\"}");
         }
-
         User user = userService.register(
                 request.getEmail(),
                 request.getUsername(),
-                request.getPassword()
-        );
-
+                request.getPassword());
         String token = jwtService.generateToken(user);
         return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getUsername()));
     }
