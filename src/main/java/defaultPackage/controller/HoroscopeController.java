@@ -115,6 +115,7 @@ public class HoroscopeController {
     public ResponseEntity<?> getLimits(@RequestHeader("Authorization") String authHeader) {
         User user = getCurrentUser(authHeader);
         long remaining = horoscopeService.getRemainingRequests(user.getId());
-        return ResponseEntity.ok(new LimitResponse(20, remaining));
+        long dailyLimit = horoscopeService.getDailyLimit();
+        return ResponseEntity.ok(new LimitResponse(dailyLimit, remaining));
     }
 }

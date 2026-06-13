@@ -43,7 +43,7 @@ class GigaChatPromptBuilderTest {
 
     @Test
     void buildSystemPrompt_ShouldContainAllRequiredFields() {
-        String prompt = builder.buildSystemPrompt("sarcastic", "low");
+        String prompt = builder.buildSystemPrompt();
         assertTrue(prompt.contains("generalForecast"));
         assertTrue(prompt.contains("careerBlock"));
         assertTrue(prompt.contains("dangerousDays"));

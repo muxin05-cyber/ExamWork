@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GigaChatPromptBuilder {
-    public String buildSystemPrompt(String tone, String formality) {
+    public String buildSystemPrompt() {
         StringBuilder sb = new StringBuilder();
         sb.append("Ты — генератор структурированных гороскопов. ");
         sb.append("Отвечай строго в формате JSON с полями: ");

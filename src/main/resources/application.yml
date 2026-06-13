@@ -28,5 +28,8 @@ gigachat:
   client-id: MDE5ZTYwYTEtNzEyZC03YTRhLTkxNWMtOWM3ZDE5MzcwMGM4OjlkYzE0YjFiLWIxNzEtNDMzNy1iOGQyLWQyZDdmYmNmNmQ5NA==
   scope: GIGACHAT_API_PERS
 
+horoscope:
+  daily-limit: 20
+
 server:
   port: 8080

@@ -42,9 +42,7 @@ public class HoroscopeService {
         return aiLogService.canMakeRequest(userId);
     }
 
-    public long getRemainingRequests(UUID userId) {
-        return aiLogService.getRemainingRequests(userId);
-    }
+
 
     public HoroscopeResponse createRequest(User user, HoroscopeGenerateRequest request) {
         HoroscopeRequest entity = new HoroscopeRequest();
@@ -73,12 +71,11 @@ public class HoroscopeService {
         }
 
         try {
-            String systemPrompt = promptBuilder.buildSystemPrompt(
-                    request.getTone(), request.getFormality());
+            String systemPrompt = promptBuilder.buildSystemPrompt();
 
             String baseUserPrompt = "Сгенерируй гороскоп для: «" +
                     request.getCharacteristic() + "». " +
-                    "Верни ТОЛЬКО JSON, без дополнительного текста.";
+                    "Верни только JSON, без дополнительного текста.";
 
             PromptDecorator decorator = decoratorFactory.createDecorator(
                     request.getAbsurdityLevel(),
@@ -127,6 +124,14 @@ public class HoroscopeService {
             throw new RuntimeException("Доступ запрещён");
         }
         return toResponse(request);
+    }
+
+    public long getRemainingRequests(UUID userId) {
+        return aiLogService.getRemainingRequests(userId);
+    }
+
+    public long getDailyLimit() {
+        return aiLogService.getDailyLimit();
     }
 
     public HoroscopeResponse saveResult(UUID requestId, User user) {

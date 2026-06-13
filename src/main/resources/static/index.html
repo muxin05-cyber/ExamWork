@@ -292,7 +292,6 @@
     let username = localStorage.getItem('username');
     let compareIds = [];
     let remainingRequests = 20;
-    let dailyLimit = 20;
 
     function isTokenExpired() {
         if (!token) return true;
@@ -392,12 +391,11 @@
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
             if (res.ok) {
-                const data = await res.json();
-                remainingRequests = data.remaining;
-                dailyLimit = data.dailyLimit;
-                updateLimitDisplay();
-                document.getElementById('limitDisplay').textContent = `Осталось: ${remainingRequests}/${dailyLimit}`;
-            }
+    const data = await res.json();
+    remainingRequests = data.remaining;
+    dailyLimit = data.dailyLimit;
+    updateLimitDisplay();
+}
         } catch (e) {}
     }
 

@@ -3,6 +3,7 @@ package defaultPackage.service;
 import defaultPackage.entity.AiRequestLog;
 import defaultPackage.entity.User;
 import defaultPackage.repository.AiRequestLogRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -12,8 +13,27 @@ import java.util.UUID;
 @Service
 public class AiLogService {
     private final AiRequestLogRepository logRepository;
+    @Value("${horoscope.daily-limit:20}")
+    private int dailyLimit;
+
     public AiLogService(AiRequestLogRepository logRepository) {
         this.logRepository = logRepository;
+    }
+
+    public boolean canMakeRequest(UUID userId) {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        long count = logRepository.countByUser_IdAndCreatedAtAfter(userId, todayStart);
+        return count < dailyLimit;
+    }
+
+    public long getRemainingRequests(UUID userId) {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        long count = logRepository.countByUser_IdAndCreatedAtAfter(userId, todayStart);
+        return Math.max(0, dailyLimit - count);
+    }
+
+    public long getDailyLimit() {
+        return dailyLimit;
     }
 
     public void logSuccess(User user, String requestType, String requestPrompt,
@@ -37,18 +57,6 @@ public class AiLogService {
         log.setTokensUsed(0);
         log.setStatus("FAILED");
         logRepository.save(log);
-    }
-
-    public boolean canMakeRequest(UUID userId) {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        long count = logRepository.countByUser_IdAndCreatedAtAfter(userId, todayStart);
-        return count < 20;
-    }
-
-    public long getRemainingRequests(UUID userId) {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        long count = logRepository.countByUser_IdAndCreatedAtAfter(userId, todayStart);
-        return Math.max(0, 20 - count);
     }
 
     private String truncate(String text, int maxLength) {
