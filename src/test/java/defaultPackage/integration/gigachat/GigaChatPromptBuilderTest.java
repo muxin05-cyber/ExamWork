@@ -48,7 +48,7 @@ class GigaChatPromptBuilderTest {
         assertTrue(prompt.contains("careerBlock"));
         assertTrue(prompt.contains("dangerousDays"));
         assertTrue(prompt.contains("whatNotToDo"));
-        assertTrue(prompt.contains("саркастичный"));
-        assertTrue(prompt.contains("разговорную речь"));
+        assertTrue(prompt.contains("Ты — генератор"));
+        assertTrue(prompt.contains("формате JSON"));
     }
 }
